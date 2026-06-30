@@ -349,6 +349,88 @@
   .participant-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
   .participant-row input{flex:1;}
   .rm-btn{background:none;border:none;color:#ff9a86;cursor:pointer;font-size:16px;}
+
+  /* SUBBATOQUES INFO CARD */
+  .squad-card{
+    background:linear-gradient(160deg, rgba(217,180,74,0.10), rgba(244,239,225,0.03));
+    border:1px solid rgba(217,180,74,0.3);
+    border-radius:14px;
+    padding:22px 22px 20px;
+    margin-bottom:46px;
+  }
+  .squad-card h2{
+    font-family:'Archivo Black',sans-serif;
+    font-size:20px;
+    margin:0 0 10px;
+    color:var(--gold);
+    letter-spacing:0.01em;
+  }
+  .squad-card p{
+    margin:0 0 10px;
+    font-size:14px;
+    line-height:1.55;
+    color:rgba(244,239,225,0.85);
+  }
+  .squad-card p:last-child{margin-bottom:0;}
+  .squad-card .cena{
+    display:inline-block;
+    background:rgba(232,84,62,0.15);
+    border:1px solid rgba(232,84,62,0.4);
+    color:#ffb7a8;
+    padding:8px 12px;
+    border-radius:8px;
+    font-size:13px;
+    font-weight:600;
+  }
+  .squad-names{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px;}
+
+  /* MUSIC PLAYER BAR */
+  .music-bar{
+    position:fixed;
+    bottom:18px;
+    left:50%;
+    transform:translateX(-50%);
+    z-index:40;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:rgba(14,46,34,0.92);
+    backdrop-filter:blur(6px);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:8px 10px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.4);
+  }
+  .music-bar .now-playing{
+    font-family:'Oswald',sans-serif;
+    font-size:10.5px;
+    color:rgba(244,239,225,0.55);
+    padding:0 6px 0 8px;
+    white-space:nowrap;
+    max-width:120px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .music-btn{
+    width:34px;height:34px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:rgba(244,239,225,0.06);
+    color:var(--cream);
+    font-size:12px;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:background .2s ease, border-color .2s ease, color .2s ease;
+    flex-shrink:0;
+  }
+  .music-btn:hover{background:rgba(217,180,74,0.18); border-color:var(--gold);}
+  .music-btn.active{background:var(--gold); color:#1c1404; border-color:var(--gold); font-weight:700;}
+  .music-btn.mute-btn{background:rgba(232,84,62,0.12); border-color:rgba(232,84,62,0.4);}
+  .music-btn.mute-btn.is-muted{background:var(--coral); color:#1c1404;}
+  @media (max-width:600px){
+    .music-bar{flex-wrap:wrap; justify-content:center; max-width:92vw;}
+    .music-bar .now-playing{display:none;}
+  }
 </style>
 </head>
 <body>
@@ -363,6 +445,16 @@
 </header>
 
 <main>
+  <div class="squad-card">
+    <h2>🔥 ¿Qué es SUBBATOQUES?</h2>
+    <p>SUBBATOQUES es el nombre con el que se conoce a esta penya de <b>8 chavales</b> que cada Mundial monta su propia porra para ver quién la tiene más larga prediciendo resultados. Aquí no se juega dinero (de momento): se juega el orgullo, las risas en el grupo y, sobre todo, una buena cena.</p>
+    <div class="squad-names">
+      <span class="team-tag">Diego</span><span class="team-tag">Charly</span><span class="team-tag">Victor</span><span class="team-tag">Oscar</span>
+      <span class="team-tag">Keras</span><span class="team-tag">Gelu</span><span class="team-tag">Quiroga</span><span class="team-tag">Pablo</span>
+    </div>
+    <p><span class="cena">🍽️ Regla de la cena:</span> quien quede primero en la clasificación al final del Mundial se lleva el título de campeón de SUBBATOQUES, y los otros 7 le pagan una cena entre todos. Así que ya sabéis: cada acierto no solo suma puntos, suma cubiertos gratis.</p>
+  </div>
+
   <div class="section-title">Clasificación</div>
   <div class="scoreboard" id="scoreboard"></div>
 
@@ -424,6 +516,17 @@
     </div>
 
   </div>
+</div>
+
+<!-- REPRODUCTOR DE MÚSICA -->
+<audio id="bgAudio" loop preload="auto"></audio>
+<div class="music-bar" id="musicBar">
+  <span class="now-playing" id="nowPlaying">🎵 Cargando...</span>
+  <button class="music-btn song-btn" data-idx="0" title="Canción 1">1</button>
+  <button class="music-btn song-btn" data-idx="1" title="Canción 2">2</button>
+  <button class="music-btn song-btn" data-idx="2" title="Canción 3">3</button>
+  <button class="music-btn song-btn" data-idx="3" title="Canción 4">4</button>
+  <button class="music-btn mute-btn" id="muteBtn" title="Silenciar">🔊</button>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -718,6 +821,70 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
 });
 
 initRealtimeSync();
+
+/* ---------- REPRODUCTOR DE MÚSICA ---------- */
+// Para añadir o cambiar canciones, sustituye el "src" y el "name" de cada entrada.
+// Coloca los ficheros de audio en la misma carpeta que este HTML.
+const PLAYLIST = [
+  { src: "cancion1.mp4", name: "Canción 1" },
+  { src: "cancion2.mp4", name: "Canción 2" },
+  { src: "cancion1.mp4", name: "Canción 3" }, // sustituye por cancion3.mp4 cuando la tengas
+  { src: "cancion2.mp4", name: "Canción 4" }  // sustituye por cancion4.mp4 cuando la tengas
+];
+
+const bgAudio = document.getElementById("bgAudio");
+const nowPlaying = document.getElementById("nowPlaying");
+const songBtns = document.querySelectorAll(".song-btn");
+const muteBtn = document.getElementById("muteBtn");
+
+let currentSong = 0;
+let isMuted = false;
+
+function loadSong(idx, autoplay){
+  currentSong = idx;
+  bgAudio.src = PLAYLIST[idx].src;
+  nowPlaying.textContent = "🎵 " + PLAYLIST[idx].name;
+  songBtns.forEach(b => b.classList.toggle("active", parseInt(b.dataset.idx) === idx));
+  if(autoplay){
+    bgAudio.play().catch(()=>{ /* el navegador bloqueó el autoplay, se reintenta con la interacción */ });
+  }
+}
+
+songBtns.forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    loadSong(parseInt(btn.dataset.idx), true);
+    if(isMuted) toggleMute();
+  });
+});
+
+function toggleMute(){
+  isMuted = !isMuted;
+  bgAudio.muted = isMuted;
+  muteBtn.textContent = isMuted ? "🔇" : "🔊";
+  muteBtn.classList.toggle("is-muted", isMuted);
+}
+muteBtn.addEventListener("click", toggleMute);
+
+// Carga la primera canción al entrar
+loadSong(currentSong, false);
+
+// Intenta el autoplay nada más cargar la página
+function tryAutoplay(){
+  bgAudio.play().catch(()=>{ /* bloqueado, se activará con el primer clic del usuario */ });
+}
+window.addEventListener("load", tryAutoplay);
+
+// La mayoría de navegadores bloquean el sonido automático hasta que el usuario interactúa con la página.
+// Este listener arranca la música en cuanto el usuario hace clic en cualquier parte, por si el autoplay falló.
+function startOnFirstInteraction(){
+  if(bgAudio.paused && !isMuted){
+    bgAudio.play().catch(()=>{});
+  }
+  document.removeEventListener("click", startOnFirstInteraction);
+  document.removeEventListener("touchstart", startOnFirstInteraction);
+}
+document.addEventListener("click", startOnFirstInteraction);
+document.addEventListener("touchstart", startOnFirstInteraction);
 </script>
 
 </body>
